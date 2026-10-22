@@ -1,0 +1,8 @@
+services:
+  server:
+    build: ./server
+    image: lick-server
+    container_name: lick-server
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
