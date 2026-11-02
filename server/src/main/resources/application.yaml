@@ -1,0 +1,6 @@
+ktor:
+  deployment:
+    port: "$PORT:8080"            # переменная PORT, по умолчанию 8080
+    host: "0.0.0.0"
+  application:
+    modules: [ com.rostis.lick.ApplicationKt.module ]
