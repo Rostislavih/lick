@@ -1,5 +1,8 @@
 package com.rostis.lick
 
+import com.rostis.lick.config.AppConfig
+import com.rostis.lick.db.LickDatabase
+import com.rostis.lick.db.Migrations
 import io.ktor.http.*
 import io.ktor.http.ContentType.Application.Json
 import io.ktor.serialization.kotlinx.json.*
@@ -22,6 +25,11 @@ val LickJson = Json {
 fun main(args: Array<String>) = EngineMain.main(args)
 
 fun Application.module() {
+    val config = AppConfig.load(environment.config)
+    val db = LickDatabase(config.db)
+    monitor.subscribe(ApplicationStopped) { db.close() }
+    Migrations.run(db.dataSource)   // база недоступна или миграция сломана — сервер не стартует
+
     install(CallLogging) {
         level = Level.INFO
         filter { call -> call.request.path() != "/health" }   // пингер мониторинга не засоряет логи

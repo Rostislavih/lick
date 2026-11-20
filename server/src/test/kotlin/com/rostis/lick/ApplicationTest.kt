@@ -1,18 +1,32 @@
 package com.rostis.lick
 
+import com.rostis.lick.config.DbConfig
+import com.rostis.lick.db.TestPostgres
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
+import java.sql.DriverManager
 import kotlin.test.*
 
 class ApplicationTest {
 
-    /** Тот же application.yaml, что и при настоящем запуске: модули и дефолты настроек берутся из него. */
-    private fun lickTestApplication(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
-        environment { config = ApplicationConfig("application.yaml") }
+    /** Тот же application.yaml, что и при настоящем запуске, но база — тестовая. */
+    private fun lickTestApplication(
+        db: DbConfig = TestPostgres.freshDatabase(),
+        block: suspend ApplicationTestBuilder.() -> Unit,
+    ) = testApplication {
+        environment {
+            config = ApplicationConfig("application.yaml").mergeWith(
+                MapApplicationConfig(
+                    "db.url" to db.url,
+                    "db.user" to db.user,
+                    "db.password" to db.password,
+                ),
+            )
+        }
         block()
     }
 
@@ -21,6 +35,22 @@ class ApplicationTest {
         val response = client.get("/health")
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("ok", response.bodyAsText())
+    }
+
+    @Test
+    fun startingServerAppliesMigrations() {
+        val db = TestPostgres.freshDatabase()
+
+        lickTestApplication(db) { startApplication() }
+
+        DriverManager.getConnection(db.url, db.user, db.password).use { connection ->
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT count(*) FROM users").use { rows ->
+                    assertTrue(rows.next())
+                    assertEquals(0, rows.getInt(1))
+                }
+            }
+        }
     }
 
     @Test

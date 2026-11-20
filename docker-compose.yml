@@ -1,8 +1,50 @@
 services:
+  postgres:
+    image: postgres:17
+    container_name: lick-postgres
+    environment:
+      POSTGRES_DB: lick
+      POSTGRES_USER: lick
+      POSTGRES_PASSWORD: lick
+    ports:
+      # 5433 снаружи: 5432 на этой машине занят базой другого проекта.
+      # Только localhost: сервер из IDE и DBeaver подключаются, из сети — нет.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lick -d lick"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    container_name: lick-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports:
+      - "9000:9000"             # S3 API
+      - "9001:9001"             # веб-консоль: http://localhost:9001
+    volumes:
+      - miniodata:/data
+
   server:
     build: ./server
     image: lick-server
     container_name: lick-server
+    profiles: ["full"]          # не стартует по умолчанию — только в «режиме Б»
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/lick     # имя сервиса, не localhost
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:

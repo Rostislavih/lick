@@ -4,3 +4,8 @@ ktor:
     host: "0.0.0.0"
   application:
     modules: [ com.rostis.lick.ApplicationKt.module ]
+
+db:
+  url: "$DB_URL:jdbc:postgresql://localhost:5433/lick"
+  user: "$DB_USER:lick"
+  password: "$DB_PASSWORD:lick"
