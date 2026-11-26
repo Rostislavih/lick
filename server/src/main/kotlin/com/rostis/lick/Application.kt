@@ -3,6 +3,7 @@ package com.rostis.lick
 import com.rostis.lick.config.AppConfig
 import com.rostis.lick.db.LickDatabase
 import com.rostis.lick.db.Migrations
+import com.rostis.lick.protocol.LickJson
 import io.ktor.http.*
 import io.ktor.http.ContentType.Application.Json
 import io.ktor.serialization.kotlinx.json.*
@@ -14,13 +15,7 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
-
-/** Общие настройки JSON: новые поля от новых клиентов не роняют старый сервер (раздел 6). */
-val LickJson = Json {
-    ignoreUnknownKeys = true
-}
 
 fun main(args: Array<String>) = EngineMain.main(args)
 
@@ -34,7 +29,7 @@ fun Application.module() {
         level = Level.INFO
         filter { call -> call.request.path() != "/health" }   // пингер мониторинга не засоряет логи
     }
-    install(ContentNegotiation) { json(LickJson) }
+    install(ContentNegotiation) { json(LickJson) }   // общий с клиентом, из :core
     install(StatusPages) {
         exception<ForbiddenException> { call, e -> call.respond(HttpStatusCode.Forbidden, ApiError(e.code)) }
         exception<NotFoundException> { call, e -> call.respond(HttpStatusCode.NotFound, ApiError(e.code)) }
